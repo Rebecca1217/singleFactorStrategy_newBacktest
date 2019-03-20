@@ -88,11 +88,8 @@ for jFactor = 1:length(fNameUniverse)
         %         load('E:\futureData\liquidityInfo.mat')
         % @2019.02.21 原始的liquidityInfo是从漫雪之前保存的数据直接读的，以后都不用这个了，全改为每次自己生成判断
         % 漫雪现在也是每次现判断
-        load('E:\futureData\liquidityInfoHuatai2.mat')
-        liquidityInfo = liquidityInfoHuatai2;
-        liquidityInfo = liquidityInfo(...
-            liquidityInfo.Date >= min(factorData.Date) &...
-            liquidityInfo.Date <= max(factorData.Date), :);
+        liquidityInfo = getLiquidInfoHuatai2(factorData.Date(1), factorData.Date(end), 60, 0.4, false);
+     
         % @2018.12.24 liquidityInfo也要剔除股指和国债期货
         % 因子数据筛选：第三：纯商品部分
         liquidityInfo = delStockBondIdx(liquidityInfo); %% 这一步其实不用，因为Huatai版本已经剔除了股指和国债期货
@@ -174,8 +171,8 @@ for jFactor = 1:length(fNameUniverse)
             
             strategyPara.crossType = 'dn';
             strategyPara.freqK = 'Dly';
-            strategyPara.stDate = 20100101;
-            strategyPara.edDate = 20190115;
+            strategyPara.stDate = factorPara.dateFrom;
+            strategyPara.edDate = factorPara.dateTo;
             [BacktestResult, BacktestAnalysis] = ...
                 CTABacktest_GeneralPlatform_v2_1(targetListI, strategyPara, tradingPara);
             % 这个地方TargetListI输入是日间的，tradingPara的数据TableData要和日间对应，日内的要和日内对应
