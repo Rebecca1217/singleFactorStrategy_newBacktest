@@ -12,9 +12,9 @@ dataPath = '\\Cj-lmxue-dt\期货数据2.0\dlyData';
 factorDataPath = 'E:\Repository\factorTest\factorDataTT.mat';
 
 %% 读取因子
-fNameUniverse = {'SpotPremiumV4Lag1'};
+fNameUniverse = {'warrant0250'};
 volWin = 90;
-holdingUniverse = 50;
+holdingUniverse = 30;
 
 finalRes = num2cell(nan(11, length(holdingUniverse) * length(fNameUniverse) + 1));
 totalResult = cell(1, length(holdingUniverse));
@@ -26,15 +26,15 @@ for jFactor = 1:length(fNameUniverse)
     % factorPara.dataPath = [dataPath, '\主力合约-比例后复权']; % 计算因子（收益率）用复权数据
     factorPara.lotsDataPath = [dataPath, '\主力合约']; % 计算手数需要用主力合约，不复权
     factorPara.dateFrom = 20100101;
-    factorPara.dateTo = 20190115;
+    factorPara.dateTo = 20190422;
     factorPara.priceType = 'Close';  % 海通和华泰都是复权收盘发信号，主力结算交易
     holdingTime = holdingUniverse;
     
     tradingPara.groupNum = 3; % 对冲比例10%，20%对应5组
     tradingPara.pct = 0.5; % 高波动率筛选的标准，剔除百分位pctATR以下的
-    tradingPara.capital = 1e8;
-    tradingPara.direct = 1; % 这里用的是factorDataTT本身，和factorTest里面用的factorRankTT不一样（Rank已经调整过顺序）
-    tradingPara.volWin = 90;
+    tradingPara.capital = 8e6;
+    tradingPara.direct = -1; % 这里用的是factorDataTT本身，和factorTest里面用的factorRankTT不一样（Rank已经调整过顺序）
+    tradingPara.volWin = volWin;
     % tradePara.futUnitPath = '\\Cj-lmxue-dt\期货数据2.0\usualData\minTickInfo.mat'; %期货最小变动单位
     tradingPara.futMainContPath = '\\Cj-lmxue-dt\期货数据2.0\商品期货主力合约代码';
     tradingPara.futDataPath = '\\CJ-LMXUE-DT/futureData_fromWind\priceData_byFut'; %期货主力合约数据路径
@@ -58,13 +58,17 @@ for jFactor = 1:length(fNameUniverse)
     for kHolding = 1:length(holdingTime)
         
         tradingPara.holdingTime = holdingTime(kHolding); % 调仓间隔（持仓日期）
-        % 确定通道数，持仓时间30天以下的每5天一条通道，30填以上的每10天一条通道，持仓时间一般不会超过100天
+        % 确定通道数，持仓时间30天以下的每2天一条通道，30填以上的每5天一条通道，持仓时间一般不会超过100天
         if tradingPara.holdingTime <= 30
-            tradingPara.passwayInterval = 2;
+            tradingPara.passwayInterval = 15;
         else
-            tradingPara.passwayInterval = 5;
+            tradingPara.passwayInterval = 25;
         end
-        tradingPara.passway = floor(tradingPara.holdingTime / tradingPara.passwayInterval); % 通道数
+         if tradingPara.holdingTime < 2
+            tradingPara.passway = 1;
+        else
+            tradingPara.passway = floor(tradingPara.holdingTime / tradingPara.passwayInterval); % 通道数
+         end
         
         load(factorDataPath)
         %% 因子数据筛选：第一：日期
@@ -88,8 +92,10 @@ for jFactor = 1:length(fNameUniverse)
         %         load('E:\futureData\liquidityInfo.mat')
         % @2019.02.21 原始的liquidityInfo是从漫雪之前保存的数据直接读的，以后都不用这个了，全改为每次自己生成判断
         % 漫雪现在也是每次现判断
-        liquidityInfo = getLiquidInfoHuatai2(factorData.Date(1), factorData.Date(end), 60, 0.4, false);
-     
+%         liquidityInfo = getLiquidInfoHuatai2(factorData.Date(1), factorData.Date(end), 60, 0.4, false);
+        
+        liquidityInfo = getLiquidInfoNew(...
+            factorData.Date(1), factorData.Date(end), 60, 'relative', 0.4, 182); % 新品种上市半年后再交易
         % @2018.12.24 liquidityInfo也要剔除股指和国债期货
         % 因子数据筛选：第三：纯商品部分
         liquidityInfo = delStockBondIdx(liquidityInfo); %% 这一步其实不用，因为Huatai版本已经剔除了股指和国债期货
@@ -161,6 +167,8 @@ for jFactor = 1:length(fNameUniverse)
             
             posHands = getholdinghands(posTradingDirect, posFullDirect, tradingPara.capital / tradingPara.passway);
             
+            str = sprintf('posHandsW%s = posHands;', num2str(jPassway));
+            eval(str)
             %             targetPortfolio = getMainContName(posHands);
             %             [BacktestResult,err] = CTABacktest_GeneralPlatform_3(targetPortfolio,tradingPara);
             %             BacktestAnalysis = CTAAnalysis_GeneralPlatform_2(BacktestResult);
@@ -168,7 +176,8 @@ for jFactor = 1:length(fNameUniverse)
             %             将targetPortfolio修改为TargetListI的格式，第一天是初始手数，后面都是轧差后的交易单
             
             targetListI = getTargetList(posHands);
-            
+            str = sprintf('targetListIW%s = targetListI;', num2str(jPassway));
+            eval(str)
             strategyPara.crossType = 'dn';
             strategyPara.freqK = 'Dly';
             strategyPara.stDate = factorPara.dateFrom;
