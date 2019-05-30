@@ -47,7 +47,13 @@ for ia = 2:height(TableData)
         tdList.hands(ia) = aimHands.hands;
         % 将当日的收益拆分成两个部分：历史持仓中不受交易影响的部分带来的收益+交易带来的收益
         if chgIF==0
-            hisLeft = sign(hisHands)*min(abs([hisHands,aimHands.hands])); %不受影响的手数
+%             hisLeft = sign(hisHands)*min(abs([hisHands,aimHands.hands])); %不受影响的手数
+            if sign(hisHands) * sign(aimHands.hands) == -1
+                hisLeft = 0;
+            else
+                hisLeft = sign(hisHands)*min(abs([hisHands,aimHands.hands])); %不受影响的手数
+            end
+            
             profitH = (TableData.close(ia)-TableData.close(ia-1))*hisLeft;
         else
             profitH = 0;

@@ -40,7 +40,8 @@ slip = 2; %滑点
 PType = 'open'; %交易价格
 tickNum = 10;
 % 交易数据路径
-futDataPath = '\\CJ-LMXUE-DT\futureData_fromWind\priceData_byFut'; 
+% futDataPath = '\\CJ-LMXUE-DT\futureData_fromWind\priceData_byFut'; 
+futDataPath = 'E:\futureDataBasic\priceData_byFut';
 tickDataPath = '\\10.201.227.227\d\期货数据\Data_Cleaning\WWB'; %tick数据路径
 ttNames = {'fixC';'slip';'PType';'tickNum';'futDataPath';'tickDataPath'};
 if isempty(TradePara)

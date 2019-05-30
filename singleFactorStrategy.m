@@ -7,14 +7,14 @@ addpath getdata getholding BacktestPlatform_for_futs_v2
 %% 一些通用参数
 % getBasicData得到一个面板table，包含日期，各品种主力合约每日的复权价格
 % global usualPath
-usualPath = '\\Cj-lmxue-dt\期货数据2.0\usualData'; %
-dataPath = '\\Cj-lmxue-dt\期货数据2.0\dlyData';
+% usualPath = '\\Cj-lmxue-dt\期货数据2.0\usualData'; %
+% dataPath = '\\Cj-lmxue-dt\期货数据2.0\dlyData';
 factorDataPath = 'E:\Repository\factorTest\factorDataTT.mat';
 
 %% 读取因子
-fNameUniverse = {'warrant0250'};
-volWin = 90;
-holdingUniverse = 30;
+fNameUniverse = {'SpotPremiumV4Lag1'};
+volWin = 60;
+holdingUniverse = 50;
 
 finalRes = num2cell(nan(11, length(holdingUniverse) * length(fNameUniverse) + 1));
 totalResult = cell(1, length(holdingUniverse));
@@ -24,22 +24,23 @@ for jFactor = 1:length(fNameUniverse)
     % factorName = 'warrant250';
     % 因子本身参数在这里已无需设置了，这里的参数只是策略上的参数，如持仓时间
     % factorPara.dataPath = [dataPath, '\主力合约-比例后复权']; % 计算因子（收益率）用复权数据
-    factorPara.lotsDataPath = [dataPath, '\主力合约']; % 计算手数需要用主力合约，不复权
+%     factorPara.lotsDataPath = [dataPath, '\主力合约']; % 计算手数需要用主力合约，不复权
     factorPara.dateFrom = 20100101;
-    factorPara.dateTo = 20190422;
+    factorPara.dateTo = 20190513; % 设置这个时间一定要注意因子数据有没有更新到这时候
     factorPara.priceType = 'Close';  % 海通和华泰都是复权收盘发信号，主力结算交易
     holdingTime = holdingUniverse;
     
     tradingPara.groupNum = 3; % 对冲比例10%，20%对应5组
     tradingPara.pct = 0.5; % 高波动率筛选的标准，剔除百分位pctATR以下的
-    tradingPara.capital = 8e6;
-    tradingPara.direct = -1; % 这里用的是factorDataTT本身，和factorTest里面用的factorRankTT不一样（Rank已经调整过顺序）
+    tradingPara.capital = 2000000;
+    tradingPara.direct = 1; % 这里用的是factorDataTT本身，和factorTest里面用的factorRankTT不一样（Rank已经调整过顺序）
     tradingPara.volWin = volWin;
     % tradePara.futUnitPath = '\\Cj-lmxue-dt\期货数据2.0\usualData\minTickInfo.mat'; %期货最小变动单位
-    tradingPara.futMainContPath = '\\Cj-lmxue-dt\期货数据2.0\商品期货主力合约代码';
-    tradingPara.futDataPath = '\\CJ-LMXUE-DT/futureData_fromWind\priceData_byFut'; %期货主力合约数据路径
-    tradingPara.futUnitPath = '\\Cj-lmxue-dt\期货数据2.0\usualData\minTickInfo.mat'; %期货最小变动单位
-    tradingPara.futMultiPath = '\\Cj-lmxue-dt\期货数据2.0\usualData\PunitInfo'; %期货合约乘数
+%     tradingPara.futMainContPath = '\\Cj-lmxue-dt\期货数据2.0\商品期货主力合约代码';
+%     tradingPara.futDataPath = '\\CJ-LMXUE-DT\futureData_fromWind\priceData_byFut'; %期货主力合约数据路径
+    tradingPara.futDataPath = 'E:\futureDataBasic\priceData_byFut';
+%     tradingPara.futUnitPath = '\\Cj-lmxue-dt\期货数据2.0\usualData\minTickInfo.mat'; %期货最小变动单位
+%     tradingPara.futMultiPath = '\\Cj-lmxue-dt\期货数据2.0\usualData\PunitInfo'; %期货合约乘数
     tradingPara.PType = 'open'; %交易价格，一般用open（开盘价）或者avg(日均价）
     tradingPara.fixC = 0.0002; %固定成本 华泰是单边万五，海通单边万三
     tradingPara.slip = 2; %滑点 两家券商都不加滑点
@@ -62,7 +63,7 @@ for jFactor = 1:length(fNameUniverse)
         if tradingPara.holdingTime <= 30
             tradingPara.passwayInterval = 15;
         else
-            tradingPara.passwayInterval = 25;
+            tradingPara.passwayInterval = 50;
         end
          if tradingPara.holdingTime < 2
             tradingPara.passway = 1;
@@ -176,7 +177,8 @@ for jFactor = 1:length(fNameUniverse)
             %             将targetPortfolio修改为TargetListI的格式，第一天是初始手数，后面都是轧差后的交易单
             
             targetListI = getTargetList(posHands);
-            str = sprintf('targetListIW%s = targetListI;', num2str(jPassway));
+            targetListNew = getTargetListNew(posHands.fullHands);
+            str = sprintf('targetListW%s = targetListI;', num2str(jPassway));
             eval(str)
             strategyPara.crossType = 'dn';
             strategyPara.freqK = 'Dly';
@@ -184,6 +186,8 @@ for jFactor = 1:length(fNameUniverse)
             strategyPara.edDate = factorPara.dateTo;
             [BacktestResult, BacktestAnalysis] = ...
                 CTABacktest_GeneralPlatform_v2_1(targetListI, strategyPara, tradingPara);
+%             [BacktestResultNew, BacktestAnalysisNew] = ...
+%                 CTABacktest_GeneralPlatform_v2_1(targetListNew, strategyPara, tradingPara);
             % 这个地方TargetListI输入是日间的，tradingPara的数据TableData要和日间对应，日内的要和日内对应
             % 可以跑通，回测变慢了不少
             

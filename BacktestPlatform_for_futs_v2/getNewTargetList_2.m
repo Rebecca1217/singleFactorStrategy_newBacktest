@@ -53,7 +53,8 @@ if ~isempty(listI)
                     if sign(tmpO.hands)==sign(hisHands) %开平需要轧差
                         netHands = tmpO.hands+tmpC.hands;
                         if netHands==0
-                            listI = [];
+%                             listI = [];% @2019.04.30不要这么赋值，这样会导致217和223行数据格式对不上 之前没遇到问题是因为没有输入这样当天轧差为0的单子
+                        listI(:, :) = []; % listI需要保持table格式
                         elseif sign(netHands)==sign(hisHands) %净开仓
                             listI = tmpO;
                             listI.hands = netHands;
@@ -117,7 +118,7 @@ if ~isempty(listI)
     end
 end
 if err==1
-    newList = [];
+    newList = []; % 这里其实最好也不要这么赋值，但是err = 1应该也要报错了吧？先不管了
     return;
 end
 
